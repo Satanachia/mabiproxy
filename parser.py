@@ -117,6 +117,11 @@ def parse(data, port, direction, debug):
     
     if packet.opCode.hex()=='0001d4c3': #NGS recv 7045000000000001d4c3
         return False
+    
+    #check all parameters make sure they bytes, if not return false cause for some reason we failed to parse it
+    for i in range(len(packet.parameters)):
+        if type(packet.parameters[i].content) != bytes:
+            return False
    
     if debug:
         print("[{}({})] {}".format(direction, port, data.hex()))
@@ -124,5 +129,6 @@ def parse(data, port, direction, debug):
         print(f"\n{direction} - header: {packet.header.hex()} OPCode: {packet.opCode.hex()} ID: {packet.ID.hex()}")
         print(f"Total parameters: {packet.paramCount}")
         for i in range(len(packet.parameters)):
-            print(f"Parameter{i} :{packet.parameters[i]}")
-    return packet 
+            print(f"Parameter{i} : [Type: '{packet.parameters[i].type}' Data(hex): '{''.join(f'/x{x:02x}' for x in packet.parameters[i].content)}' Name: '{packet.parameters[i].name}']")
+
+    return packet
