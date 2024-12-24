@@ -29,6 +29,7 @@ class Parameter:
                 self.name = "bin"
 @dataclass
 class Packet:
+    debug: bool
     source: str
     data:bytes
     header: bytes = field(init=False)
@@ -49,7 +50,8 @@ class Packet:
         if self.msglenbytes == 0: 
             self.msglen = 1
             self.paramCount = 0
-            print(f"no parameters data less than 16 bytes")
+            if self.debug:
+                print(f"no parameters data less than 16 bytes")
         else:
             #Get our message length varint length in bytes so we know what offset our param count is
             self.msglen = varint.varint_len(self.msglenbytes)
@@ -94,34 +96,33 @@ class Packet:
                             self.paramIndex += (contentLength + 3)
                             #print("appended string")
                         case _:
-                           print("param match not found")
+                           if self.debug:
+                            print("param match not found")
 
-def parse(data, port, direction):
+def parse(data, port, direction, debug):
     if port==0:
-        return
+        return False
     if direction == 'send':
-        return
+        return False
     if hex(data[0]) == hex(0x88): 
-        print(f"Encrypted Packet: {direction} {data.hex()}")
-        return
+        if debug:
+            print(f"Encrypted Packet: {direction} {data.hex()}")
+        return False
     
-    packet = Packet(source = direction, data = data)
+    #hopefully this will fix issues of failed packets
+    try: 
+        packet = Packet(source = direction, data = data, debug = debug)
+    except:
+        return False
+    
     if packet.opCode.hex()=='0001d4c3': #NGS recv 7045000000000001d4c3
-        return
+        return False
    
-   # print("[{}({})] {}".format(direction, port, data.hex()))
-    #print("op code: " + data[6:10].hex() + " ID: " + data[10:18].hex()) 
-    #print(f"preamble: {data[0:6].hex()} data: {data[6:(len(data))].hex()}")
-    print("[{}({})] {}".format(direction, port, data.hex()))
+    if debug:
+        print("[{}({})] {}".format(direction, port, data.hex()))
     
-    print(f"\n{direction} - header: {packet.header.hex()} OPCode: {packet.opCode.hex()} ID: {packet.ID.hex()}")
-    print(f"Total parameters: {packet.paramCount}")
-    for i in range(len(packet.parameters)):
-        print(f"Parameter{i} :{packet.parameters[i]}")
-    #print(f"raw data: {packet.data}")
-
-
-
-
-
-
+        print(f"\n{direction} - header: {packet.header.hex()} OPCode: {packet.opCode.hex()} ID: {packet.ID.hex()}")
+        print(f"Total parameters: {packet.paramCount}")
+        for i in range(len(packet.parameters)):
+            print(f"Parameter{i} :{packet.parameters[i]}")
+    return packet 
